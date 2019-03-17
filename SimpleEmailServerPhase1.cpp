@@ -13,11 +13,6 @@ int main(int argc, char *argv[]){
     }
     int myport;
     sscanf(argv[1],"%d",&myport);
-    // char* passwd_file_addr;
-    // sscanf(argv[2],"%s",passwd_file_addr);
-    // printf("%s\n",passwd_file_addr);
-    // passwd_file_addr=string(passwd_file_addr);
-    // printf("%d and %s",port_no,passwd_file_addr);
     int sockfd;
     sockfd=socket(PF_INET,SOCK_STREAM,0);
     sockaddr_in my_addr;
@@ -65,9 +60,9 @@ int main(int argc, char *argv[]){
         user_password_map[user]=passwd;
     }
     // cout<<user_password_map.size()<<endl;
-    char* read_message;
+    char read_message[100000];
     //??What should be length of buffer read.
-    int length_read=recv(sockfd,read_message,500,0);
+    int length_read=recv(client_sockfd,read_message,100000,0);
     // cout<<length_read<<endl;
     if(length_read==0){
         cout<<"Sender has closed connection"<<endl;
@@ -75,13 +70,13 @@ int main(int argc, char *argv[]){
     else if(length_read==-1){
         cout<<"Error in reading"<<endl;
     }
-    else{
-        cout<<"Reading Successful"<<endl;
-    }
     // read_message="User: user1 Pass: Mh:21drrz";
-    regex user_pass_format("User: (.*) Pass: (.*)");
+    regex user_pass_format("User: (.*) Pass: (.*)\0");
     smatch match;
-    string read_message_str="User: user1 Pass: Mh:21drrz";
+    string read_message_str(read_message);
+    read_message_str=read_message_str.substr(0,length_read);
+    // cout<<"85: "<<read_message_str<<endl;
+    // printf("86: %s, %d",read_message,length_read);
     if (regex_search(read_message_str,match,user_pass_format)==true){
         const char* uname=match.str(1).c_str();
         const char* pwd=match.str(2).c_str();
@@ -91,27 +86,24 @@ int main(int argc, char *argv[]){
             if(user_password_map[uname_str]==pwd_str){
                 printf("Welcome %s\n",uname);
                 // printf("Welcome %s\n",uname);
-                string message="Welcome "+uname_str+"\n";
+                string message="Welcome "+uname_str+"\n"+"\0";
                 // printf("--%s--\n",uname);
                 const char* message_sent=message.c_str();
                 // cout<<"here"<<endl;
                 // sprintf(message_sent,"Welcome %s\n",uname);
                 // cout<<message.size()<<endl;
-                send(client_sockfd,message_sent,message.size(),0);
-                length_read=recv(sockfd,read_message,500,0);
+                send(client_sockfd,message_sent,strlen(message_sent),0);
+                // cout<<"on 105"<<endl;
+                length_read=recv(client_sockfd,read_message,500,0);
                 if(length_read==0){
                     cout<<"Sender has closed connection"<<endl;
                 }
                 else if(length_read==-1){
                     cout<<"Error in reading"<<endl;
                 }
-                else{
-                    cout<<"Reading Successful"<<endl;
-                }
                 // read_message=string("quit").c_str();
-                string quit_command="quit";
-                cout<<"here"<<endl;
-                quit_command="quit";
+                string quit_command(read_message);
+                quit_command=quit_command.substr(0,length_read);
                 if(quit_command=="quit"){
                     cout<<"Bye "+uname_str+"\n";
                     close(sockfd);
