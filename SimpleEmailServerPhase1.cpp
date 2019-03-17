@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
     socklen_t sin_size=sizeof(struct sockaddr_in);
     int client_sockfd=accept(sockfd,(struct sockaddr*) &their_addr,&sin_size);
     if(client_sockfd!=-1){
-        printf("Client: %d:%d\n",their_addr.sin_addr.s_addr,their_addr.sin_port);
+        cout<<"Client: "<<inet_ntoa(their_addr.sin_addr)<<":"<<ntohs(their_addr.sin_port)<<endl;
 
     }
     string user,passwd;
