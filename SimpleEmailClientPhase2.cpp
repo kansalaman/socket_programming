@@ -18,6 +18,7 @@ int main(int argc, char *argv[]){
     int sockfd;
     sockfd=socket(PF_INET,SOCK_STREAM,0);
     // printf("%s,%s,%s\n",argv[1],argv[2],argv[3]);
+    // cout<<"here"<<endl;
     if(regex_search(ip_port_str,match,ip_port)==true){
         dest_addr.sin_family=AF_INET;
         stringstream port(match.str(2));
@@ -29,7 +30,7 @@ int main(int argc, char *argv[]){
         memset(&(dest_addr.sin_zero),'\0',8);
         int connect_success=connect(sockfd,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr));
         if(connect_success==-1){
-            fprintf(stderr,"Error: Connection Failed\n");
+            cout<<"Error: Connection Failed"<<endl;
             exit(2);
         }
         else{
@@ -43,6 +44,12 @@ int main(int argc, char *argv[]){
     //??What should be length of buffer read.
         int length_read=recv(sockfd,read_message,100000,0);
         printf("%s",read_message);
+
+        message_to_send="LIST\0";
+        send(sockfd,message_to_send.c_str(),strlen(message_to_send.c_str()),0);
+        length_read=recv(sockfd,read_message,100000,0);
+        printf("%s",read_message);
+
         message_to_send="quit\0";
         send(sockfd,message_to_send.c_str(),strlen(message_to_send.c_str()),0);
         exit(0);

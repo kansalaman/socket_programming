@@ -26,7 +26,7 @@ int main(int argc, char *argv[]){
         printf("BindDone: %d\n",myport);
     }
     else{
-        printf("Error: in binding to the port\n");
+        fprintf(stderr,"Error: in binding to the port\n");
         exit(2);
     }
     // string passwd_file_addr_str(passwd_file_addr);
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]){
     ifstream passfile(argv[2]);
     // printf("here\n");
     if(!passfile.good()){
-        cout<<"Error: Either the input file does not exist or is not readable"<<endl;
+        fprintf(stderr,"Error: Either the input file does not exist or is not readable\n");
         exit(3);
     }
     // else{

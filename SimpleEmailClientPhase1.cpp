@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
         memset(&(dest_addr.sin_zero),'\0',8);
         int connect_success=connect(sockfd,(struct sockaddr *)&dest_addr,sizeof(struct sockaddr));
         if(connect_success==-1){
-            fprintf(stderr,"Error: Connection Failed\n");
+            cout<<"Error: Connection Failed"<<endl;
             exit(2);
         }
         else{
