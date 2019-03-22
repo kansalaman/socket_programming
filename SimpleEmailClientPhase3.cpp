@@ -97,16 +97,16 @@ int main(int argc, char *argv[]){
             char file_name[100000];
             read(sockfd,file_name,100000);
             string downloaded_file_name(file_name);
-            cout<<"Line 101 "<<downloaded_file_name<<endl;
             string save_address=fname+"/"+downloaded_file_name;
             FILE* dwfl;
+            // cout<<save_address<<endl;
             dwfl=fopen(save_address.c_str(),"ab");
             char file_temp_buff[1024];
             int brecv=0;
             long double cize=1;
             brecv=recv(sockfd,file_temp_buff,1024,0);
+            if(brecv!=0){
             while(true){
-                cout<<brecv<<endl;
                 cize++;
                 fflush(stdout);
                 fwrite(file_temp_buff,1,brecv,dwfl);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]){
                 brecv=recv(sockfd,file_temp_buff,1024,0);
                 // if(brecv<=0) break;
             }
-            cout<<"Downloaded Message "+file_no_str+"\n";
+            cout<<"Downloaded Message "+file_no_str+"\n";}
             fclose(dwfl);
         }
 

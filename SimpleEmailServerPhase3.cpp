@@ -193,14 +193,12 @@ int main(int argc, char *argv[]){
                                         char buff[100000];
                                         int nread=fread(buff,1,1024,temp_file);
                                         if(nread>0)
-                                        {   cout<<nread<<" "<<strlen(buff)<<endl;
+                                        {   
                                            int amt_send=send(client_sockfd,buff,nread,0);
-                                           cout<<"Line 198 amt_send "<<amt_send<<" "<<strlen(buff)<<endl;
                                         }
                                         if(nread<1024){
                                             break;
                                         }
-                                        cout<<"reading"<<endl;
                                     }
 
 
