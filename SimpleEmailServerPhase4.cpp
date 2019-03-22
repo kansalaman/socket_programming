@@ -5,9 +5,25 @@
 #include<unistd.h>
 #include<arpa/inet.h>
 #include<dirent.h>
+#include<sys/time.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<errno.h>
+
 #define BACKLOG 10
 using namespace std;
 int main(int argc, char *argv[]){
+    int opt=true;
+    int client_sockets[10],max_no_clients=10,activity,temp_sd,clearance_level[10],max_sd;
+    for(int i=0;i<max_no_clients;i++){
+        clearance_level[i]=0;
+    }
+    string ulist[10],passlist[10];
+    fd_set fdlist,readfds;
+    for(int i=0;i<max_no_clients;i++){
+        client_sockets[i]=0;
+    }
+
     if(argc != 4){
         fprintf(stderr,"Error: 3 arguments after the executable name are required (portNum,passwdfile,user-database) but given %d\n",argc-1);
         exit(1);
@@ -16,6 +32,12 @@ int main(int argc, char *argv[]){
     sscanf(argv[1],"%d",&myport);
     int sockfd;
     sockfd=socket(PF_INET,SOCK_STREAM,0);
+
+    if(setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(opt))<0){
+        perror("setsockopt");
+        exit(9);
+    }
+
     sockaddr_in my_addr;
     my_addr.sin_family=AF_INET;
     my_addr.sin_port=htons(myport);
@@ -59,41 +81,96 @@ int main(int argc, char *argv[]){
     while(passfile>>user>>passwd){
         user_password_map[user]=passwd;
     }
+    FD_SET(sockfd,&fdlist);
     while(true){
-        client_sockfd=accept(sockfd,(struct sockaddr*) &their_addr,&sin_size);
-        if(client_sockfd!=-1){
-            cout<<"Client: "<<inet_ntoa(their_addr.sin_addr)<<":"<<ntohs(their_addr.sin_port)<<endl;
+        readfds=fdlist;
+        max_sd=sockfd;
+        for(int i=0;i<max_no_clients;i++){
+            max_sd=max(max_sd,client_sockets[i]);
+        }
+        activity=select(max_sd+1,&readfds,NULL,NULL,NULL);
+
+        if(FD_ISSET(sockfd,&readfds)){
+            client_sockfd=accept(sockfd,(struct sockaddr*) &their_addr,&sin_size);
+            for(int i=0;i<max_no_clients;i++){
+                if(client_sockets[i]==0){
+                    client_sockets[i]=client_sockfd;
+                    clearance_level[i]=1;
+                    FD_SET(client_sockfd,&fdlist);
+                    break;
+                }
+        }
 
         }
-        
-        char read_message[100000];
-        int length_read=recv(client_sockfd,read_message,100000,0);
-        if(length_read==0){
-            cout<<"Sender has closed connection"<<endl;
-        }
-        else if(length_read==-1){
-            cout<<"Error in reading"<<endl;
-        }
-        regex user_pass_format("User: (.*) Pass: (.*)\0");
-        smatch match;
-        string read_message_str(read_message);
-        read_message_str=read_message_str.substr(0,length_read);
+        else{
+            for(int i1=0;i1<max_no_clients;i1++){
+                if(FD_ISSET(client_sockets[i1],&readfds)){
+                    client_sockfd=client_sockets[i1];
+                    if(clearance_level[i1]==1){
 
-        if (regex_search(read_message_str,match,user_pass_format)==true){
+                        char read_message[100000];
+                        int length_read=recv(client_sockfd,read_message,100000,0);
+                        if(length_read==0){
+                            cout<<"Sender has closed connection"<<endl;
+                        }
+                        else if(length_read==-1){
+                            cout<<"Error in reading"<<endl;
+                        }
+                        regex user_pass_format("User: (.*) Pass: (.*)\0");
+                        smatch match;
+                        string read_message_str(read_message);
+                        read_message_str=read_message_str.substr(0,length_read);
 
-            const char* uname=match.str(1).c_str();
-            const char* pwd=match.str(2).c_str();
-            string uname_str=match.str(1);
-            string pwd_str=match.str(2);
+                        if (regex_search(read_message_str,match,user_pass_format)==true){
 
-            if(user_password_map.find(uname_str)!=user_password_map.end()){
-                if(user_password_map[uname_str]==pwd_str){
-                    printf("Welcome %s\n",uname);
-                    string message="Welcome "+uname_str+"\n"+"\0";
-                    const char* message_sent=message.c_str();
-                    send(client_sockfd,message_sent,strlen(message_sent),0);
-                    
-                    while(true){
+                            const char* uname=match.str(1).c_str();
+                            const char* pwd=match.str(2).c_str();
+                            string uname_str=match.str(1);
+                            string pwd_str=match.str(2);
+
+                            if(user_password_map.find(uname_str)!=user_password_map.end()){
+                                if(user_password_map[uname_str]==pwd_str){
+                                    printf("Welcome %s\n",uname);
+                                    string message="Welcome "+uname_str+"\n"+"\0";
+                                    const char* message_sent=message.c_str();
+                                    send(client_sockfd,message_sent,strlen(message_sent),0);
+                                    clearance_level[i1]=2;
+                                    ulist[i1]=uname_str;
+                                    passlist[i1]=pwd_str;
+                                    }
+                                else{
+                                    cout<<"Wrong Passwd\n";
+                                    close(client_sockfd);
+                                    clearance_level[i1]=0;
+                                    client_sockets[i1]=0;
+                                    FD_CLR(client_sockfd,&fdlist);
+                                }
+                            }
+                            else{
+                                cout<<uname_str+" is invalid"<<endl;
+                                cout<<"Invalid User\n";
+                                close(client_sockfd);
+                                clearance_level[i1]=0;
+                                client_sockets[i1]=0;
+                                FD_CLR(client_sockfd,&fdlist);
+                            }
+                            // printf("User is %s, and Password is %s\n",uname,pwd);
+
+                        }
+                        else{
+                            cout<<"Unknown Command\n";
+                            close(client_sockfd);
+                            clearance_level[i1]=0;
+                            client_sockets[i1]=0;
+                            FD_CLR(client_sockfd,&fdlist);
+                        }
+
+                    }
+                    else{
+                        int length_read;
+                        char read_message[100000];
+                        string uname_str=ulist[i1];
+                        string message;
                         regex retrv_format("RETRV ([0123456789]+)");
                         smatch retrv_match;
 
@@ -134,7 +211,9 @@ int main(int argc, char *argv[]){
 
                                 cout<<uname_str+": Folder Read Fail\n";
                                 close(client_sockfd);
-                                break;
+                                clearance_level[i1]=0;
+                                client_sockets[i1]=0;
+                                FD_CLR(client_sockfd,&fdlist);
                             }
                             
                         }
@@ -142,7 +221,9 @@ int main(int argc, char *argv[]){
                             
                                     cout<<"Bye "+uname_str+"\n";
                                     close(client_sockfd);
-                                    break;
+                                    clearance_level[i1]=0;
+                                    client_sockets[i1]=0;
+                                    FD_CLR(client_sockfd,&fdlist);
                                 }
                         else if(regex_search(list_command,retrv_match,retrv_format)==true){
                             string file_id(retrv_match.str(1));
@@ -154,7 +235,9 @@ int main(int argc, char *argv[]){
                             if(user_folder==NULL){
                                 cout<<"Message Read Fail\n";
                                 close(client_sockfd);
-                                break;
+                                clearance_level[i1]=0;
+                                client_sockets[i1]=0;
+                                FD_CLR(client_sockfd,&fdlist);
 
                             }
                             else{
@@ -174,12 +257,16 @@ int main(int argc, char *argv[]){
                                 catch(...){
                                     cout<<"Message Read Fail\n";
                                     close(client_sockfd);
-                                    break;
+                                    clearance_level[i1]=0;
+                                    client_sockets[i1]=0;
+                                    FD_CLR(client_sockfd,&fdlist);
                                 }
                                 if(!file_found){
                                     cout<<"Message Read Fail\n";
                                     close(client_sockfd);
-                                    break;
+                                    clearance_level[i1]=0;
+                                    client_sockets[i1]=0;
+                                    FD_CLR(client_sockfd,&fdlist);
                                 }
                                 else{
                                     cout<<uname_str+": Transferring Message "+file_id+"\n";
@@ -211,31 +298,16 @@ int main(int argc, char *argv[]){
                         else{
                             cout<<"Unknown Command\n";
                             close(client_sockfd);
-                            break;
+                            clearance_level[i1]=0;
+                            client_sockets[i1]=0;
+                            FD_CLR(client_sockfd,&fdlist);
                         }
 
-
-                    
-                }}
-                else{
-                    cout<<"Wrong Passwd\n";
-                    close(client_sockfd);
+                    }
                 }
             }
-            else{
-                cout<<uname_str+" is invalid"<<endl;
-                cout<<"Invalid User\n";
-                close(client_sockfd);
-            }
-            // printf("User is %s, and Password is %s\n",uname,pwd);
-
-        }
-        else{
-            cout<<"Unknown Command\n";
-            close(client_sockfd);
         }
     }
-    close(sockfd);
 
     return 0;
 

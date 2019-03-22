@@ -125,6 +125,7 @@ int main(int argc, char *argv[]){
                         else{
                             cout<<uname_str+": Folder Read Fail\n";
                             close(client_sockfd);
+                            break;
                         }
                         
                     }
