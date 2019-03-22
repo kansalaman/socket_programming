@@ -61,6 +61,7 @@ int main(int argc, char *argv[]){
     }
     while(true){
         client_sockfd=accept(sockfd,(struct sockaddr*) &their_addr,&sin_size);
+        cout<<"waiting"<<endl;
         if(client_sockfd!=-1){
             cout<<"Client: "<<inet_ntoa(their_addr.sin_addr)<<":"<<ntohs(their_addr.sin_port)<<endl;
 
@@ -187,17 +188,19 @@ int main(int argc, char *argv[]){
                                     string file_path(user_folder_str+"/"+file_to_transfer_str);
                                     temp_file=fopen(file_path.c_str(),"rb");
                                     // fscanf(temp_file,"%s",file_buffer);
-                                    write(client_sockfd,file_to_transfer_str.c_str(),100000);
+                                    send(client_sockfd,file_to_transfer_str.c_str(),strlen(file_to_transfer_str.c_str()),0);
                                     while(1){
-                                        unsigned char buff[1024]={0};
+                                        char buff[100000];
                                         int nread=fread(buff,1,1024,temp_file);
                                         if(nread>0)
-                                        {
-                                           write(client_sockfd,buff,nread);
+                                        {   cout<<nread<<" "<<strlen(buff)<<endl;
+                                           int amt_send=send(client_sockfd,buff,nread,0);
+                                           cout<<"Line 198 amt_send "<<amt_send<<" "<<strlen(buff)<<endl;
                                         }
                                         if(nread<1024){
                                             break;
                                         }
+                                        cout<<"reading"<<endl;
                                     }
 
 

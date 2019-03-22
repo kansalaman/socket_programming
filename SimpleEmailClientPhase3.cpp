@@ -86,6 +86,7 @@ int main(int argc, char *argv[]){
         int length_read=recv(sockfd,read_message,100000,0);
         printf("%s",read_message);
 
+        
         for(int i=0;i<file_no_vec.size();i++){
             int file_no_to_download=file_no_vec[i];
             ostringstream temp1;
@@ -96,18 +97,25 @@ int main(int argc, char *argv[]){
             char file_name[100000];
             read(sockfd,file_name,100000);
             string downloaded_file_name(file_name);
-            string save_address=fname+"/"+uname+"/"+downloaded_file_name;
+            cout<<"Line 101 "<<downloaded_file_name<<endl;
+            string save_address=fname+"/"+downloaded_file_name;
             FILE* dwfl;
             dwfl=fopen(save_address.c_str(),"ab");
             char file_temp_buff[1024];
             int brecv=0;
             long double cize=1;
-            while((brecv=read(sockfd,file_temp_buff,1024))>0){
+            brecv=recv(sockfd,file_temp_buff,1024,0);
+            while(true){
+                cout<<brecv<<endl;
                 cize++;
+                fflush(stdout);
                 fwrite(file_temp_buff,1,brecv,dwfl);
+                if(brecv<1024) break;
+                brecv=recv(sockfd,file_temp_buff,1024,0);
+                // if(brecv<=0) break;
             }
             cout<<"Downloaded Message "+file_no_str+"\n";
-
+            fclose(dwfl);
         }
 
         message_to_send="quit\0";
